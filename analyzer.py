@@ -6,7 +6,8 @@ from detector import (
     detect_porosity,
     detect_undercut,
     detect_cracks,
-    detect_spatter
+    detect_spatter,
+    compute_image_quality_metrics
 )
 
 def compare_images(standard_path, defective_path):
@@ -36,12 +37,15 @@ def compare_images(standard_path, defective_path):
     crack_results = detect_cracks(def_img)
     spatter_results = detect_spatter(def_img)
     
+    quality_metrics = compute_image_quality_metrics(defective_path)
+    
     return {
         "ssim_score": ssim_score,
         "porosity": porosity_results,
         "undercut": undercut_results,
         "crack": crack_results,
-        "spatter": spatter_results
+        "spatter": spatter_results,
+        "quality_metrics": quality_metrics
     }
 
 def classify_severity(results, cfg):
@@ -88,11 +92,24 @@ def classify_severity(results, cfg):
         cfg.ISO5817LevelC.CRACK_TOLERANCE
     )
     
+    # Image Quality Severity
+    gv = results["quality_metrics"]["gv"]
+    gv_severity = cfg.get_quality_severity_range(gv, cfg.ImageQuality.GV_MIN, cfg.ImageQuality.GV_MAX)
+    
+    snr = results["quality_metrics"]["snr"]
+    snr_severity = cfg.get_quality_severity_min(snr, cfg.ImageQuality.SNR_MIN)
+    
+    iqi = results["quality_metrics"]["iqi"]
+    iqi_severity = cfg.get_quality_severity_min(iqi, cfg.ImageQuality.IQI_MIN)
+    
     severities = {
         "porosity": porosity_severity,
         "undercut": undercut_severity,
         "spatter": spatter_severity,
-        "crack": crack_severity
+        "crack": crack_severity,
+        "gv": gv_severity,
+        "snr": snr_severity,
+        "iqi": iqi_severity
     }
     
     # 5. Overall Verdict
@@ -124,6 +141,17 @@ def generate_summary_text(results, severity):
     report.append("       WELDING DEFECT ANALYSIS REPORT    ")
     report.append("=========================================")
     report.append(f"Structural Similarity Index (SSIM): {results['ssim_score']:.4f}\n")
+    
+    report.append("--- IMAGE QUALITY METRICS ---")
+    
+    qm = results["quality_metrics"]
+    gv_sev = severity["individual"]["gv"]
+    snr_sev = severity["individual"]["snr"]
+    iqi_sev = severity["individual"]["iqi"]
+    
+    report.append(f"Grey Scale Value (GV): {qm['gv']:.2f} -> [{gv_sev}]")
+    report.append(f"Signal to Noise Ratio (SNR): {qm['snr']:.2f} -> [{snr_sev}]")
+    report.append(f"Image Quality Indicator (IQI): {qm['iqi']:.2f} -> [{iqi_sev}]\n")
     
     report.append("--- DEFECT FINDINGS ---")
     

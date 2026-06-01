@@ -110,6 +110,49 @@ def generate_pdf_report(results, severity, standard_path, defective_path, output
     
     pdf.ln(10)
     
+    # Image Quality Metrics Table
+    pdf.set_font("helvetica", "B", 10)
+    pdf.cell(0, 8, "Image Quality Metrics", align="L")
+    pdf.ln(8)
+    
+    q_col_widths = [60, 30, 40, 25]
+    q_headers = ["Metric", "Value", "Acceptable Range", "Severity"]
+    for i, h in enumerate(q_headers):
+        pdf.cell(q_col_widths[i], 8, h, border=1, align="C")
+    pdf.ln()
+    
+    pdf.set_font("helvetica", "", 10)
+    
+    def add_q_row(metric_str, val_str, limit_str, sev_str):
+        pdf.cell(q_col_widths[0], 8, metric_str, border=1)
+        pdf.cell(q_col_widths[1], 8, val_str, border=1, align="C")
+        pdf.cell(q_col_widths[2], 8, limit_str, border=1, align="C")
+        
+        # Color coding for severity
+        if sev_str == config.SEVERITY_ACCEPT:
+            pdf.set_text_color(0, 150, 0)
+        elif sev_str == config.SEVERITY_MARGINAL:
+            pdf.set_text_color(200, 150, 0)
+        elif sev_str == config.SEVERITY_REJECT:
+            pdf.set_text_color(200, 0, 0)
+            
+        pdf.cell(q_col_widths[3], 8, sev_str, border=1, align="C")
+        pdf.set_text_color(0, 0, 0) # reset
+        pdf.ln()
+
+    qm = results['quality_metrics']
+    add_q_row("Grey Scale Value (GV)", f"{qm['gv']:.2f}",
+              f"{config.ImageQuality.GV_MIN} - {config.ImageQuality.GV_MAX}",
+              severity['individual']['gv'])
+    add_q_row("Signal to Noise Ratio (SNR)", f"{qm['snr']:.2f}",
+              f">= {config.ImageQuality.SNR_MIN}",
+              severity['individual']['snr'])
+    add_q_row("Image Quality Indicator (IQI)", f"{qm['iqi']:.2f}",
+              f">= {config.ImageQuality.IQI_MIN}",
+              severity['individual']['iqi'])
+              
+    pdf.ln(10)
+    
     # SSIM Score Section
     ssim = results['ssim_score']
     if ssim > 0.9:

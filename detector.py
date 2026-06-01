@@ -183,3 +183,33 @@ def detect_spatter(image):
         "count": count,
         "annotated_image": annotated_image
     }
+
+def compute_image_quality_metrics(image_path):
+    """
+    Computes Grey Scale Value (GV), Signal to Noise Ratio (SNR),
+    and Image Quality Indicator (IQI) for a weld image.
+    """
+    img = cv2.imread(image_path)
+    if img is None:
+        raise FileNotFoundError(f"Image not found at path: {image_path}")
+        
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    gv = float(np.mean(gray))
+    
+    std_dev = float(np.std(gray))
+    if std_dev == 0:
+        snr = 0.0
+    else:
+        snr = gv / std_dev
+        
+    if snr + 1.0 == 0:
+        iqi = 0.0
+    else:
+        iqi = (gv / 255.0) * (snr / (snr + 1.0)) * 100.0
+        
+    return {
+        "gv": gv,
+        "snr": snr,
+        "iqi": iqi
+    }
